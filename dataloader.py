@@ -34,55 +34,40 @@ def randomCrop(img, centralCrop=False):
   return imgNormalize
 
 
-def Producer(queue, list, batch_size, epoch_size, mode):
-  '''
-  produce customized dataset (5 way 1 shot images and labels)
-     
-    :param 
-        queue: train or test queue to fill in
-        list: pre-generated list of a training data or testing data
-        batch_size: batch size
-        epoch_size: total number of sampling
-        mode: either training or testing
-    :return: 
-        queue: fill the queue with generated data
-  '''
-
-  total_batch = int(epoch_size/batch_size)
-  epochNum = 0
-  while 1:
-    print ("epoch num = " + str(epochNum))
-    epochNum = epochNum + 1
-
-    if mode is "training":
-        WAYS_TRAIN_TEST = args.way_train
-    else:
-        WAYS_TRAIN_TEST = args.way_test
-
-    print ('generating ' + mode + ' combination.. ')
+def Producer(list, ways_num, episode_num, mode):
+    #print ('generating ' + mode + ' combination.. ')
     # [0] is trueLabel; [-1] is t0;
-    trueLabel_supportSet_query = get_combination_miniImageNet_5way1shot_random_pathonly_episode_variableWays(list, visualize=False,episode_num=args.num_episode, ways = WAYS_TRAIN_TEST, query_num = args.num_query)
-    print('done')
+    trueLabel_supportSet_query = get_combination_miniImageNet_5way1shot_random_pathonly_episode_variableWays(list, visualize=False,episode_num=episode_num, ways=ways_num, query_num=args.num_query)
+    return trueLabel_supportSet_query
 
-    for i in range(total_batch):
-        #start = time.time()
-        batch_train_images_data = [np.zeros((batch_size,80,80,3)) for _ in range(WAYS_TRAIN_TEST + 1)]
 
-        batch_train_images_lists = [[] for _ in range(WAYS_TRAIN_TEST + 1)]
-        batch_train_trueLabel = trueLabel_supportSet_query[0][i * batch_size:(i + 1) * batch_size]
-        for idx in range(WAYS_TRAIN_TEST + 1):
-            batch_train_images_lists[idx] = trueLabel_supportSet_query[idx + 1][i * batch_size:(i + 1) * batch_size]
+def loadImg(sample_list):
+    mode = "training"
+    train_images_data = []
+    for way in range(1, len(sample_list)):
+        img = cv2.imread(sample_list[way])
+        RGB_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = RGB_img
+        if np.random.choice([True, False]) and mode is "training":
+            img = cv2.flip(RGB_img,1)
+        imgNormalize = randomCrop(img, centralCrop=args.central_crop)
+        train_images_data.append(imgNormalize.reshape(80, 80, 3))
 
-        for idx in range(batch_size):
-            #print(batch_train_images_t0_list[idx])
-            for way in range(WAYS_TRAIN_TEST + 1):
-                img = cv2.imread(batch_train_images_lists[way][idx])
-                RGB_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                img = RGB_img
-                if np.random.choice([True, False]) and mode is "training":
-                    img = cv2.flip(RGB_img,1)
-                imgNormalize = randomCrop(img)
-                batch_train_images_data[way][idx, :, :, :] = imgNormalize.reshape(80, 80, 3)
+    train_images_data.insert(0, sample_list[0])
+    return tuple(train_images_data)
 
-        batch_train_images_data.insert(0, batch_train_trueLabel)
-        queue.put(batch_train_images_data)
+
+def loadImg_testing(sample_list):
+    mode = "testing"
+    train_images_data = []
+    for way in range(1, len(sample_list)):
+        img = cv2.imread(sample_list[way])
+        RGB_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = RGB_img
+        if np.random.choice([True, False]) and mode is "training":
+            img = cv2.flip(RGB_img, 1)
+        imgNormalize = randomCrop(img, centralCrop=args.central_crop)
+        train_images_data.append(imgNormalize.reshape(80, 80, 3))
+
+    train_images_data.insert(0, sample_list[0])
+    return tuple(train_images_data)
