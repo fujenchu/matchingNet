@@ -10,6 +10,7 @@ Please contact the authors for dataset (either `miniImageNet` from Vinyals or `n
 ### training
 ```
 python visdom.server -port 5000
+(or python -m visdom.server -port 5000)
 python demo.py --gpuid 0 --logport 5000
 ```
 feel free to modify `config.py` to change arguments
